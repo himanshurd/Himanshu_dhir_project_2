@@ -1,0 +1,97 @@
+CREATE TABLE businesses (
+  id MEDIUMINT NOT NULL AUTO_INCREMENT,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  website VARCHAR(255) NOT NULL,
+  category VARCHAR(255) NOT NULL,
+  subcategory VARCHAR(255) NOT NULL,
+  street VARCHAR(255) NOT NULL,
+  city VARCHAR(255) NOT NULL,
+  state CHAR(2) NOT NULL,
+  zip CHAR(5) NOT NULL,
+  price FLOAT UNSIGNED NOT NULL,
+  ownerid MEDIUMINT NOT NULL,
+  PRIMARY KEY (id),
+  INDEX idx_ownerid (ownerid)
+);
+
+INSERT INTO businesses 
+VALUES 
+  (NULL, 'Chalet Motel', 'A nice rooms and great staff', 'www.chaletmotel.com', 'Motel', 'Rooms', '510 SE 3rd str', 'Bend', 'OR', '97702', 59.00, 1),
+  (NULL, 'Cascade Lodge', 'Pool is available', 'www.cascadelodge.com', 'Motel', 'Rooms', '420 SE 3rd str', 'Bend', 'OR', '97702', 79.00, 2),
+  (NULL, 'Mantra', 'A great Indian restraunt', 'www.mantra.com', '657 downtown near old mill', 'Restraunt', 'Pub/Bar', 'Bend', 'OR', '97702', 25.00, 3),
+  (NULL, 'Bend bikes', 'Every kind of bikes available', 'www.bendbikes.com', '793 3rd st', 'Bike Store', 'Bike Accesories', 'Bend', 'OR', '97702', 25.00, 4),
+  (NULL, 'IN OUT', 'Double double are the best', 'www.inout.com', '765 blvd', 'Restraunt', 'Fast Food', 'Corvallis', 'OR', '97702', 25.00, 5),
+  (NULL, 'McDonald\'s', 'Big mac is the best', 'www.mcdonalds.com', 'Restraunt', 'Fast Food', '78 NE 3rd st', 'Bend', 'OR', '97702', 10.00, 6),
+  (NULL, 'KFC', 'Fried chicken is the great chicken', 'www.kfc.com', 'Restraunt', 'Fast Food', '42 SE 3rd st', 'Bend', 'OR', '97702', 12.00, 7),
+  (NULL, 'Baskin Robbins', 'Delicious Ice cream', 'www.baskinrobbin.com', 'Restraunt', 'Fast Food', '43 SE 3rd st', 'Bend', 'OR', '97702', 8.99, 8),
+  (NULL, 'T-Mobile', 'Best deals', 'www.tmobile.com', 'Phone Store', 'Phone Accessories', '231 SE 3rd st', 'Bend', 'OR', '97702', 1000.00, 9),
+  (NULL, 'Verizon', 'Great network coverage', 'www.verizon.com', 'Phone Store', 'Phone Accessories', '87 SE 3rd st', 'Bend', 'OR', '97702', 1029.00, 10),
+  (NULL, 'Taco Bell', 'great Mexican food', 'www.tacobell.com', 'Restraunt', 'Fast Food', '98 NE 3rd st', 'Bend', 'OR', '97702', 5.99, 11);
+
+
+CREATE TABLE reviews (
+  id INT NOT NULL AUTO_INCREMENT,
+  userid INT NOT NULL,
+  businessid MEDIUMINT NOT NULL,
+  review varchar(255),
+  dollars INT NOT NULL,
+  stars INT NOT NULL,
+  PRIMARY KEY (id),
+  FOREIGN KEY (businessid) REFERENCES businesses(id)
+);
+
+INSERT INTO reviews VALUES(NULL,1,1,"Nice Staff, Great rooms",59,10),
+(NULL,2,1,"Rooms are clean",69,8),
+(NULL,3,1,"Great for the price, nice and big rooms",109,10);
+
+INSERT INTO reviews VALUES(NULL,1,2,"Staff is rude act like a owner",109,5),
+(NULL,4,2,"rooms were not clean",159,6),
+(NULL,5,2,"Too expensive for this price",169,4);
+
+INSERT INTO reviews VALUES(NULL,1,3,"Great Indian Food",59,10),
+(NULL,8,3,"Not enough spicy food",129,7),
+(NULL,10,3,"Less quantity more price",450,5);
+
+INSERT INTO reviews VALUES(NULL,1,4,"Great bikes",20,10),
+(NULL,2,4,"Every kind of bikes available",15,8),
+(NULL,3,4,"Awesome staff and helpful",10,10);
+
+INSERT INTO reviews VALUES(NULL,1,5,"Double Double is my favorite",2,7),
+(NULL,4,5,"double quater was raw",9,2),
+(NULL,8,5,"The best food ever",10,10);
+
+INSERT INTO reviews VALUES(NULL,10,6,"BigMac is a great burger",6,7),
+(NULL,9,6,"Fries was nice and hot",3,10),
+(NULL,4,6,"Best Diet coke",1,10);
+
+INSERT INTO reviews VALUES(NULL,1,7,"Raw chicken",18,1),
+(NULL,2,7,"Rude Staff",9,5),
+(NULL,3,7,"I love chicken tenders, fries was fresh. Whole family was happy",49,9);
+
+INSERT INTO reviews VALUES(NULL,1,8,"Vanilla with chocolate is great",9,10),
+(NULL,20,8,"Ice cream was already melted",5,5),
+(NULL,12,8,"Realy good Ice cream",10,8);
+
+INSERT INTO reviews VALUES(NULL,1,9,"Nice Staff",590,10),
+(NULL,8,9,"great deals",690,8),
+(NULL,6,9,"Got it free phone case with my phone hahaha",1099,10);
+
+INSERT INTO reviews VALUES(NULL,1,10,"John helped me alot",950,10),
+(NULL,20,10,"great network coverage",699,9),
+(NULL,30,10,"Great deals",199,10);
+
+INSERT INTO reviews VALUES(NULL,10,11,"Tacos are my favorite",5,10),
+(NULL,34,11,"Craving box is a great deal",11,8),
+(NULL,30,11,"Staff is good",16,10);
+
+
+CREATE TABLE photos (
+      id int(64) NOT NULL AUTO_INCREMENT,
+      userid int NOT NULL,
+      businessid MEDIUMINT NOT NULL,
+      caption VARCHAR(255),
+      PRIMARY KEY (id),
+      FOREIGN KEY (businessid)
+            REFERENCES businesses(id)
+  );

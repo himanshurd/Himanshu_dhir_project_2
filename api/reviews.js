@@ -1,10 +1,8 @@
 const router = require('express').Router();
 const { validateAgainstSchema, extractValidFields } = require('../lib/validation');
 
-const reviews = require('../data/reviews');
-
+const mysqlPool = require('../lib/mysqlpool');
 exports.router = router;
-exports.reviews = reviews;
 
 /*
  * Schema describing required/optional fields of a review object.
@@ -17,43 +15,78 @@ const reviewSchema = {
   review: { required: false }
 };
 
+async function insertNewReview(review) {
+  const validatedReview = extractValidFields(
+    review,
+    reviewSchema
+  );
+  const [ result ] = await mysqlPool.query(
+    'INSERT INTO reviews SET ?',
+    validatedReview
+  );
+  return result.insertId;
+}
+
+async function existingReview(userid, businessid) {
+  const [results] = await mysqlPool.query(
+    'SELECT * FROM reviews WHERE userid=? AND businessid=?',
+    [ userid, businessid ],
+  );
+  return (results.length > 0);
+}
+
+async function getReviewById(reviewId) {
+  const [ results ] = await mysqlPool.query(
+    'SELECT * FROM reviews WHERE id = ?',
+    [ reviewId ],
+  );
+  return results[0];
+}
+
+async function updateReviewById(reviewId, review) {
+  const validatedReview = extractValidFields(
+    review,
+    reviewSchema
+  );
+  const [ result ] = await mysqlPool.query(
+      'UPDATE reviews SET ? WHERE id = ?',
+      [ validatedReview, reviewId ]
+  );
+  return result.affectedRows > 0;
+}
+
+async function deleteReviewByID(reviewId) {
+  const [ result ] = await mysqlPool.query(
+      'DELETE FROM reviews WHERE id = ?',
+      [ reviewId ]
+  );
+  return result.affectedRows > 0;
+}
 
 /*
  * Route to create a new review.
  */
-router.post('/', function (req, res, next) {
-  if (validateAgainstSchema(req.body, reviewSchema)) {
 
-    const review = extractValidFields(req.body, reviewSchema);
-
-    /*
-     * Make sure the user is not trying to review the same business twice.
-     */
-    const userReviewedThisBusinessAlready = reviews.some(
-      existingReview => existingReview
-        && existingReview.ownerid === review.ownerid
-        && existingReview.businessid === review.businessid
-    );
-
-    if (userReviewedThisBusinessAlready) {
-      res.status(403).json({
-        error: "User has already posted a review of this business"
-      });
+router.post('/', async function (req, res, next) {
+  try {
+    if (validateAgainstSchema(req.body, reviewSchema)) {
+      const hasreview = await existingReview(req.body.userid, req.body.businessid);
+      if (hasreview) {
+        res.status(403).json({
+          error: "User has already posted a review of this business"
+        });
+      } else {
+        id = await insertNewReview(req.body);
+        res.status(201).json({ id: id });
+      }
     } else {
-      review.id = reviews.length;
-      reviews.push(review);
-      res.status(201).json({
-        id: review.id,
-        links: {
-          review: `/reviews/${review.id}`,
-          business: `/businesses/${review.businessid}`
-        }
+      res.status(400).json({
+        error: "Request body is not a valid review object"
       });
     }
-
-  } else {
-    res.status(400).json({
-      error: "Request body is not a valid review object"
+  } catch (err) {
+    res.status(500).send({
+      error: "Unable to add review."
     });
   }
 });
@@ -61,38 +94,34 @@ router.post('/', function (req, res, next) {
 /*
  * Route to fetch info about a specific review.
  */
-router.get('/:reviewID', function (req, res, next) {
-  const reviewID = parseInt(req.params.reviewID);
-  if (reviews[reviewID]) {
-    res.status(200).json(reviews[reviewID]);
-  } else {
-    next();
+
+router.get('/:reviewID', async function (req, res, next) {
+  try {
+    const review = await getReviewById(parseInt(req.params.reviewID));
+    if (review) {
+      res.status(200).send(review);
+    } else {
+      next();
+    }
+  } catch (err) {
+    res.status(500).send({
+      error: "Unable to fetch review."
+    });
   }
 });
-
 /*
  * Route to update a review.
  */
-router.put('/:reviewID', function (req, res, next) {
-  const reviewID = parseInt(req.params.reviewID);
-  if (reviews[reviewID]) {
 
+router.put('/:reviewID', async function (req, res, next) {
+  const reviewID = parseInt(req.params.reviewID);
+  try {
     if (validateAgainstSchema(req.body, reviewSchema)) {
-      /*
-       * Make sure the updated review has the same businessid and userid as
-       * the existing review.
-       */
       let updatedReview = extractValidFields(req.body, reviewSchema);
-      let existingReview = reviews[reviewID];
+      let existingReview = await getReviewById(reviewID);
       if (updatedReview.businessid === existingReview.businessid && updatedReview.userid === existingReview.userid) {
-        reviews[reviewID] = updatedReview;
-        reviews[reviewID].id = reviewID;
-        res.status(200).json({
-          links: {
-            review: `/reviews/${reviewID}`,
-            business: `/businesses/${updatedReview.businessid}`
-          }
-        });
+        await updateReviewById(reviewID, req.body);
+        res.status(200).send({});
       } else {
         res.status(403).json({
           error: "Updated review cannot modify businessid or userid"
@@ -103,21 +132,29 @@ router.put('/:reviewID', function (req, res, next) {
         error: "Request body is not a valid review object"
       });
     }
-
-  } else {
-    next();
+  } catch (err) {
+    res.status(500).json({
+      error: "Unable to update review"
+    })
   }
 });
+
 
 /*
  * Route to delete a review.
  */
-router.delete('/:reviewID', function (req, res, next) {
-  const reviewID = parseInt(req.params.reviewID);
-  if (reviews[reviewID]) {
-    reviews[reviewID] = null;
-    res.status(204).end();
-  } else {
-    next();
+
+router.delete('/:reviewID', async function (req, res, next) {
+  try {
+    const deleteSuccessful = await deleteReviewByID(parseInt(req.params.reviewID))
+    if (deleteSuccessful) {
+      res.status(204).end();
+    } else {
+      next();
+    }
+  } catch (err) {
+    res.status(500).send({
+      error: "Unable to delete review."
+    });
   }
 });
